@@ -3,6 +3,7 @@ using Ecom.ApI.Helper;
 using Ecom.Core.DTO;
 using Ecom.Core.Entites.Product;
 using Ecom.Core.Interfaces;
+using Ecom.Core.Sharing;
 using Ecom.infrastructure.Repositores.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,23 +17,18 @@ namespace Ecom.ApI.Controllers
         {
         }
         [HttpGet("get-all")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery]ArticleParams articleParams)
         {
             try
             {
                 var listOfArticls = await _unitOfWork.ArticleRepository
-                    .GetAllAsyncWithModify(null,e=>e.Images,e=>e.ArticleCategories,e=>e.ArticleRows);
-                if (listOfArticls is null)
+                    .GetAllAsync(articleParams);
+                if (listOfArticls.Count()==0)
                 {
                     return BadRequest(new ResponseApi(400));
                 }
-
-                return Ok(listOfArticls.Select(e=> new
-                {
-                    e.Id,
-                    e.Title,
-                   
-                }));
+                int totalCount = await _unitOfWork.ArticleRepository.CountAsunc();
+                return Ok(new Pagination<ArticleDTO>(articleParams.pageSize,articleParams.PageNumber,totalCount,listOfArticls));
             }
             catch (Exception ex)
             {

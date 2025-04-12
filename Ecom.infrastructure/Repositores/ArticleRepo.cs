@@ -3,7 +3,9 @@ using Ecom.Core.DTO;
 using Ecom.Core.Entites.Product;
 using Ecom.Core.Interfaces;
 using Ecom.Core.Services;
+using Ecom.Core.Sharing;
 using Ecom.infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +41,33 @@ namespace Ecom.infrastructure.Repositores
         public void  DeleteAsyncWithDeleteingImage(string src)
         {
              _imageMangmentService.DeleteImageAync(src);
+        }
+
+        public async Task<IEnumerable<ArticleDTO>> GetAllAsync(ArticleParams articleParams)
+        {
+            var query =  _context.Articles
+                .Include(e => e.Images)
+                .Include(e => e.ArticleCategories)
+                .Include(e => e.ArticleRows).AsNoTracking();
+
+            if (!string.IsNullOrEmpty(articleParams.Search))
+            {
+                var searchWords = articleParams.Search.Split(' ');
+                query = query.Where(e => searchWords.All(w =>
+                e.Title.ToLower().Contains(w.ToLower()) ||
+                  e.Description.ToLower().Contains(w.ToLower())
+                ));
+              
+            }
+            if (articleParams.CategoryId.HasValue)
+            {
+                query = query.Where(e => e.ArticleCategories.Any(c => c.CategoryId == articleParams.CategoryId));
+            }
+            query = query
+                .Skip((articleParams.PageNumber - 1) * articleParams.pageSize)
+                .Take(articleParams.pageSize);
+            var result = _mapper.Map<List<ArticleDTO>>(query);
+            return result;
         }
     }
 }

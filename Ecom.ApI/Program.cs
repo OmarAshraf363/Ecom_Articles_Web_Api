@@ -1,4 +1,5 @@
 ﻿
+using Ecom.ApI.Middleware;
 using Ecom.infrastructure;
 
 namespace Ecom.API
@@ -10,7 +11,7 @@ namespace Ecom.API
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
+            builder.Services.AddMemoryCache();
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
@@ -45,6 +46,9 @@ namespace Ecom.API
                     c.RoutePrefix = string.Empty; // اجعل Swagger متاحًا في الصفحة الرئيسية
                 });
             }
+            app.UseMiddleware<ExceptionsMiddleware>();
+            //for error handling =>if we not found page rediriect to error page
+            app.UseStatusCodePagesWithReExecute("/errors/{0}");
             app.UseCors("allow-all");
             app.UseHttpsRedirection();
 

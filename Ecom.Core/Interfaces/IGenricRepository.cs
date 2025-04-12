@@ -16,7 +16,7 @@ namespace Ecom.Core.Interfaces
       public  Task<IReadOnlyList<T>> GetAllAsyncWithModify(Expression<Func<T ,bool>>? expression,params Expression<Func<T, object>>[] includePropiertes);
 
 
-
+        public Task<int> CountAsunc();
 
 
        public Task AddAsync(T entity);
