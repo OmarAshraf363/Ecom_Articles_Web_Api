@@ -12,8 +12,8 @@ namespace Ecom.infrastructure.Data.Config
     {
         public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Article> builder)
         {
-            builder.Property(x => x.Title).IsRequired().HasMaxLength(50);
-            builder.Property(x => x.Description).IsRequired().HasMaxLength(250);
+            builder.Property(x => x.Title).IsRequired().HasMaxLength(150);
+            builder.Property(x => x.Description).IsRequired().HasMaxLength(500);
         }
     }
 }

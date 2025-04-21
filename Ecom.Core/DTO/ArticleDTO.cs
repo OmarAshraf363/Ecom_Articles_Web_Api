@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Ecom.Core.Entites.Product;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Ecom.Core.DTO
 {
-    public record ArticleDTO( string Title, string Description, string BaseImageUrl, List<ArticleRowDTO>? ArticleRows);
+    public record ArticleDTO( int id,string Title, string Description, string BaseImageUrl,string UserId,string UserName, DateTime CreatedAt,int Likes,int Comments, List<ArticleRowDTO>? ArticleRows);
     public record UpdatedArticleDtO(int Id , string Title, string Description, string BaseImageUrl, List<UpdatedArticleRowDTO>? UpdatedRows);
 
     public class ArticleDTOWithImageFeilds

@@ -1,12 +1,14 @@
 ﻿
 using Ecom.ApI.Middleware;
 using Ecom.infrastructure;
+using Ecom.infrastructure.Data;
+using Microsoft.AspNetCore.Identity;
 
 namespace Ecom.API
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +33,11 @@ namespace Ecom.API
                 });
             });
 
+            builder.Services.AddIdentityServices(builder.Configuration);
+
+            builder.Services.AddJwt(builder.Configuration);
+            builder.Services.AddSwagerJwtAuth();
+
             var app = builder.Build();
 
             //add cors
@@ -51,10 +58,23 @@ namespace Ecom.API
             app.UseStatusCodePagesWithReExecute("/errors/{0}");
             app.UseCors("allow-all");
             app.UseHttpsRedirection();
+            app.UseStaticFiles();
 
             app.UseAuthorization();
+            //add roels
 
+            using (var scope = app.Services.CreateScope())
+            {
+                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
+                var roles = new[] { "Admin", "User", "Manager" };
+
+                foreach (var role in roles)
+                {
+                    if (!await roleManager.RoleExistsAsync(role))
+                        await roleManager.CreateAsync(new IdentityRole(role));
+                }
+            }
             app.MapControllers();
 
 

@@ -34,6 +34,12 @@ namespace Ecom.infrastructure.Data
             //builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
             builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
+            builder.Entity<Article>()
+                .HasOne(e=>e.User).WithMany(e => e.Articles)
+                .HasForeignKey(e=>e.AppUserId).OnDelete(DeleteBehavior.NoAction);
+
+
+
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Ecom.Core.Entites.Product;
+﻿using Ecom.Core.DTO;
+using Ecom.Core.Entites.Product;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,5 +10,6 @@ namespace Ecom.Core.Interfaces
 {
    public interface IArticleRow:IGenricRepository<ArticleRow>
     {
+        public  Task<ArticleRow> AddAsync(ArticleRowDTOWithImageFeilds model);
     }
 }

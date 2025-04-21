@@ -5,16 +5,21 @@ using Ecom.Core.Entites.Product;
 using Ecom.Core.Interfaces;
 using Ecom.Core.Sharing;
 using Ecom.infrastructure.Repositores.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Ecom.ApI.Controllers
 {
-
+    //[Authorize]
     public class ArticleController : BaseController
     {
-        public ArticleController(IUnitOfWork unitOfWork, IMapper mapper) : base(unitOfWork, mapper)
+        private readonly UserManager<AppUser> _userManager;
+        public ArticleController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager) : base(unitOfWork, mapper)
         {
+            _userManager = userManager;
         }
         [HttpGet("get-all")]
         public async Task<IActionResult> GetAll([FromQuery]ArticleParams articleParams)
@@ -60,12 +65,13 @@ namespace Ecom.ApI.Controllers
             try
             {
                 var article = await _unitOfWork.ArticleRepository
-                    .GetByIdAsync(id,e=>e.ArticleRows,e=>e.ArticleCategories,equals=>equals.Images);
+                    .GetByIdAsync(id,e=>e.ArticleRows,e=>e.ArticleCategories,e=>e.Images,e=>e.User,e=>e.Likes,e=>e.Comments);
                 if (article is null)
                 {
                     return BadRequest(new ResponseApi(400));
                 }
-                return Ok(article);
+                var articleDTO = new ArticleDTO(article.Id, article.Title, article.Description, article.BaseImageUrl, article.AppUserId, article.User.UserName, article.CreatedAt, article.Likes.Count(), article.Comments.Count(), article.ArticleRows.Select(e => new ArticleRowDTO( e.Text, e.Image)).ToList());
+                return Ok(articleDTO);
             }
             catch (Exception ex)
             {
@@ -77,18 +83,26 @@ namespace Ecom.ApI.Controllers
         {
             try
             {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-               var article= await _unitOfWork.ArticleRepository.AddAsync(articleDTO);
+                var article = await _unitOfWork.ArticleRepository.AddAsync(articleDTO);
+                if(userId is null)
+                {
+                    return BadRequest(new ResponseApi(400, "User Id is null ,please login"));
+                }
+              
                 if (articleDTO. ArticleRows !=null)
                 {
                     article.ArticleRows = articleDTO. ArticleRows.Select(e => new ArticleRow()
                     {
                         Text = e.Text,
                         Image = e.Image,
-                        ArticleId = article.Id
                     }).ToList();
                 }
+                article.AppUserId = userId;
+                article.User = _userManager.Users.FirstOrDefault(e => e.Id == userId);
                 await _unitOfWork.ArticleRepository.AddAsync(article);
+
                 return Ok(new ResponseApi(200,"Article Added Successfully"));
             }
             catch (Exception ex)
@@ -98,7 +112,7 @@ namespace Ecom.ApI.Controllers
             }
         }
         [HttpPost("add-article-row")]
-        public async Task<IActionResult> AddArticleRow(ArticleRowDTO addArticleRowDTO)
+        public async Task<IActionResult> AddArticleRow([FromForm]ArticleRowDTOWithImageFeilds addArticleRowDTO)
         {
             try
             {
@@ -108,9 +122,11 @@ namespace Ecom.ApI.Controllers
                 //    Text = addArticleRowDTO.Text,
                 //    Image = addArticleRowDTO.Image
                 //};
-                var articleRow = _mapper.Map<ArticleRow>(addArticleRowDTO);
+                var articleRow = await _unitOfWork.ArticleRowRepo.AddAsync(addArticleRowDTO);
                 await _unitOfWork.ArticleRowRepo.AddAsync(articleRow);
-                return Ok(new ResponseApi(200, "Article Row Added Successfully"));
+
+                return Ok(new { image = addArticleRowDTO.Image });
+                //return Ok(new ResponseApi(200, "Article Row Added Successfully"));
             }
             catch (Exception ex)
             {
@@ -222,5 +238,6 @@ namespace Ecom.ApI.Controllers
                 return StatusCode(500, new ResponseApi(500, ex.Message));
             }
         }
+    
     }
 }

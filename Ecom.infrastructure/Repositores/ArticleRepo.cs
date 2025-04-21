@@ -33,7 +33,7 @@ namespace Ecom.infrastructure.Repositores
                 .UploadImageAsync(articleDTO.BaseImageUrl, articleDTO.Title);
             var article = _mapper.Map<Article>(articleDTO);
             article.BaseImageUrl = imagePath;
-            
+
             return article;
 
         }
@@ -63,10 +63,32 @@ namespace Ecom.infrastructure.Repositores
             {
                 query = query.Where(e => e.ArticleCategories.Any(c => c.CategoryId == articleParams.CategoryId));
             }
-            query = query
+            query =  query
                 .Skip((articleParams.PageNumber - 1) * articleParams.pageSize)
                 .Take(articleParams.pageSize);
-            var result = _mapper.Map<List<ArticleDTO>>(query);
+
+
+            var result = await query.Select(e => new ArticleDTO(
+
+                e.Id,
+                e.Title,
+                e.Description,
+                e.BaseImageUrl
+                , e.AppUserId,
+                e.User.UserName,
+                e.CreatedAt ,
+                e.Likes.Count,
+                e.Comments.Count,
+                e.ArticleRows.Select(c=>new ArticleRowDTO(c.Text,c.Image)).ToList()
+
+
+
+
+
+
+
+                )).ToListAsync();
+           
             return result;
         }
     }

@@ -10,9 +10,9 @@ namespace Ecom.Core.Entites.Product
 {
    public class AppUser:IdentityUser
     {
-        public string DisplayName  { get; set; }
-        public string PicImage { get; set; }
-        public Address Address { get; set; }
+        public string? DisplayName  { get; set; }
+        public string? PicImage { get; set; }= "noimage.png";
+        public Address? Address { get; set; }
 
         //relations
         public virtual ICollection<Article> Articles { get; set; }= new List<Article>();

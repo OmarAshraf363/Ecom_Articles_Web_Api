@@ -28,7 +28,7 @@ namespace Ecom.infrastructure.Repositores
             ImageRepo = new ImageRepo(_context);
             LikeRepo = new LikeRepo(_context);
             CommentRepo = new CommentRepo(_context);
-            ArticleRowRepo = new ArticleRowRepo(_context);
+            ArticleRowRepo = new ArticleRowRepo(_context,   _imageMangmentService);
 
 
         }
