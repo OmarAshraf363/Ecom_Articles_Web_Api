@@ -10,7 +10,7 @@ namespace Ecom.ApI.Middleware
         private readonly RequestDelegate _next;
         private readonly IHostEnvironment _env;
         private readonly IMemoryCache _cache;
-        private readonly TimeSpan _cacheTimeSpan = TimeSpan.FromSeconds(30);
+        private readonly TimeSpan _cacheTimeSpan = TimeSpan.FromSeconds(90);
 
         public ExceptionsMiddleware(RequestDelegate next, IHostEnvironment env, IMemoryCache cache)
         {
@@ -62,7 +62,7 @@ namespace Ecom.ApI.Middleware
             });
             if (dateNow - timesTamp > _cacheTimeSpan)
             {
-                if (count > 8)
+                if (count > 80)
                 {
                     return false;
                 }

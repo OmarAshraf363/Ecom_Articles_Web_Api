@@ -6,6 +6,6 @@ using System.Threading.Tasks;
 
 namespace Ecom.Core.DTO
 {
-   public record LikeDTO(int ArticleId, string UserId);
+   public record LikeDTO(int ArticleId);
 
 }

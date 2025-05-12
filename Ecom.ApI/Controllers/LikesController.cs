@@ -5,6 +5,7 @@ using Ecom.Core.Entites.Product;
 using Ecom.Core.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Ecom.ApI.Controllers
 {
@@ -19,11 +20,23 @@ namespace Ecom.ApI.Controllers
         {
             try
             {
-                var articleLikes = await _unitOfWork.LikeRepo.GetAllAsyncWithModify(x => x.ArticleId == articleId, e => e.Article);
+                var articleLikes = await _unitOfWork.LikeRepo.GetAllAsyncWithModify(x => x.ArticleId == articleId,e=>e.User, e => e.Article);
                 if (articleLikes.Count <= 0)
                     return BadRequest(new ResponseApi(400));
 
-                return Ok(articleLikes);
+                return Ok(articleLikes.Select(e => new
+                {
+                    isLike = e.IsLiked,
+                    count = articleLikes.Count,
+                 user = new {
+                     displayName = e.User.DisplayName,
+                     email = e.User.Email,
+                     userName = e.User.UserName,
+                     picImage = e.User.PicImage ?? null,
+                     phoneNumber = e.User.PhoneNumber ?? null,
+
+                 }
+                }));
 
             }
             catch (Exception ex)
@@ -39,9 +52,12 @@ namespace Ecom.ApI.Controllers
         {
             try
             {
-              
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                    return Unauthorized(new ResponseApi(401));
 
-                var existingLike = (await _unitOfWork.LikeRepo.GetAllAsyncWithModify(x => x.ArticleId == likeDTo.ArticleId && x.UserId == likeDTo.UserId)).FirstOrDefault();
+
+                var existingLike = (await _unitOfWork.LikeRepo.GetAllAsyncWithModify(x => x.ArticleId == likeDTo.ArticleId && x.UserId == userId)).FirstOrDefault();
                 //if the user has already liked the article, then remove the like
                 if (existingLike != null)
                 {
@@ -49,6 +65,7 @@ namespace Ecom.ApI.Controllers
                     return Ok(new ResponseApi(200,"User dislike this article"));
                 }
                 var like = _mapper.Map<Like>(likeDTo);
+                like.UserId=userId;
                 await _unitOfWork.LikeRepo.AddAsync(like);
                 await _unitOfWork.Commit();
                 return Ok(new ResponseApi(201,"User like this article"));

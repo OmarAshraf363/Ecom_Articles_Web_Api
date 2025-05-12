@@ -16,41 +16,54 @@ namespace Ecom.infrastructure.Repositores.Service
         {
             this.fileProvider = fileProvider;
         }
-        public void DeleteImageAync(string src)
+        public  void DeleteImageAync(string src)
         {
-            if (string.IsNullOrEmpty(src)) return;
+            if (string.IsNullOrEmpty(src)) 
+                return;
 
-            var folderPath = Path.Combine("wwwroot","Images", src);
-            if (Directory.Exists(folderPath))
+            var imagePath =  Path.Combine("wwwroot", src.TrimStart('/'));
+
+            if (File.Exists(imagePath))
             {
-                Directory.Delete(folderPath, true); 
+                File.Delete(imagePath);
             }
         }
+
 
 
 
 
         public async Task<string> UploadImageAsync(IFormFile file, string src)
         {
-            string finalSrc = null;
+            if (file == null || file.Length == 0)
+                return null;
+
             var imageDirectory = Path.Combine("wwwroot", "Images", src);
+
             if (!Directory.Exists(imageDirectory))
             {
                 Directory.CreateDirectory(imageDirectory);
             }
-            if (file.Length > 0)
-            {
 
-                var imageName = file.FileName;
-                var imageSrc = $"/Images/{src}/{imageName}";
-                var root = Path.Combine(imageDirectory, file.FileName);
-                using (var fileStream = new FileStream(root, FileMode.Create))
-                {
-                    await file.CopyToAsync(fileStream);
-                }
-                finalSrc = imageSrc;
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                throw new InvalidOperationException("Unsupported file type.");
             }
-            return finalSrc;
+
+            var uniqueName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+            var filePath = Path.Combine(imageDirectory, uniqueName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var imageSrc = $"/Images/{src}/{uniqueName}";
+            return imageSrc;
         }
+
     }
 }

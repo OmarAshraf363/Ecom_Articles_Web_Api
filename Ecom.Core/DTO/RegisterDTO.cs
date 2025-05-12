@@ -1,11 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
 
 namespace Ecom.Core.DTO
 {
     public record class RegisterDTO
     {
-        [Required]
-        public string FullName { get; init; }
+       
 
         [Required]
         public string DisplayName { get; init; }
@@ -19,5 +19,6 @@ namespace Ecom.Core.DTO
         [Required]
         [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
         public string ConfirmPassword { get; init; }
+        public IFormFile? PicImage { get; init; }
     }
 }

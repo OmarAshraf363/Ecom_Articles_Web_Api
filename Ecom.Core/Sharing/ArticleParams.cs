@@ -10,7 +10,11 @@ namespace Ecom.Core.Sharing
     {
 
         public string? Search { get; set; } 
+		public string? UserId { get; set; }
 		public int? CategoryId { get; set; } 
+
+
+		public List<int>? SavedArticlesId { get; set; }=new List<int>();
 
         public int MaxPageSize { get; set; } = 10;
 		private int _pageSize=3;

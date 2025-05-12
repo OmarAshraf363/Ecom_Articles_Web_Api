@@ -9,7 +9,7 @@ namespace Ecom.Core.DTO
    public class ResetPasswordDTO
     {
         public string NewPassword { get; set; }
-        public string ConfirmNewPassword { get; set; }
+        //public string ConfirmNewPassword { get; set; }
 
         public string? Token { get; set; }
         public string? Email { get; set; }

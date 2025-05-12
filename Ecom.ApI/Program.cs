@@ -25,13 +25,17 @@ namespace Ecom.API
             builder.Services.AddInfrastructure(builder.Configuration);
             //register AutoMapper
             builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-            builder.Services.AddCors(e =>
+            builder.Services.AddCors(options =>
             {
-                e.AddPolicy("allow-all", po =>
+                options.AddPolicy("allow-all", policy =>
                 {
-                    po.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                    policy.WithOrigins("http://localhost:4200") // Angular origin
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials(); // ضروري عشان الكوكيز
                 });
             });
+
 
             builder.Services.AddIdentityServices(builder.Configuration);
 
@@ -53,13 +57,18 @@ namespace Ecom.API
                     c.RoutePrefix = string.Empty; // اجعل Swagger متاحًا في الصفحة الرئيسية
                 });
             }
-            app.UseMiddleware<ExceptionsMiddleware>();
+            //app.UseMiddleware<ExceptionsMiddleware>();
+
+
             //for error handling =>if we not found page rediriect to error page
             app.UseStatusCodePagesWithReExecute("/errors/{0}");
             app.UseCors("allow-all");
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 
+
+            app.UseMiddleware<ReadJwtTokenFromCoockies>();
+            app.UseAuthentication();
             app.UseAuthorization();
             //add roels
 

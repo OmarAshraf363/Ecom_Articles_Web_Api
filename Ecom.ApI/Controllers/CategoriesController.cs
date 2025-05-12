@@ -25,7 +25,13 @@ namespace Ecom.ApI.Controllers
                 {
                     return BadRequest(new ResponseApi(statusCode:400));
                 }
-                return Ok(categories);
+                return Ok(categories.Select(e => new
+                {
+                    id=e.Id,
+                    name = e.Name,
+                    description = e.Description,
+                    createdAt = e.CreatedAt,
+                }));
             }
             catch (Exception ex)
             {

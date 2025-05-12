@@ -3,6 +3,8 @@ using Ecom.ApI.Helper;
 using Ecom.Core.DTO;
 using Ecom.Core.Entites.Product;
 using Ecom.Core.Interfaces;
+using Ecom.Core.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Ecom.ApI.Controllers
 {
@@ -21,16 +24,27 @@ namespace Ecom.ApI.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly IConfiguration configuration;
-        public AccountsController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IConfiguration configuration) : base(unitOfWork, mapper)
+        private readonly IImageMangmentService _imageMangmentService;
+        private readonly IEmailSender _emailSender;
+        public AccountsController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IConfiguration configuration, IImageMangmentService imageMangmentService, IEmailSender emailSender) : base(unitOfWork, mapper)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             this.configuration = configuration;
+            _imageMangmentService = imageMangmentService;
+            _emailSender = emailSender;
         }
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDTO registerDto)
+        public async Task<IActionResult> Register([FromForm] RegisterDTO registerDto)
         {
-
+            if (!ModelState.IsValid)
+            {
+                //var nameErrors = ModelState
+                //       .Where(e => e.Value.Errors.Count > 0)
+                //       .ToDictionary(k => k.Key, v => v.Value.Errors.Select(e => e.ErrorMessage).ToList());
+                ////return BadRequest(new {errors=nameErrors });
+                return BadRequest(new ValidationProblemDetails(ModelState));
+            }
             var user = new AppUser
             {
                 DisplayName = registerDto.DisplayName,
@@ -39,10 +53,22 @@ namespace Ecom.ApI.Controllers
 
 
             };
+            if (registerDto.PicImage != null&&registerDto.PicImage.Length>0)
+            {
+                var imagePath = await _imageMangmentService.UploadImageAsync(registerDto.PicImage, "user");
+                user.PicImage = imagePath;
+            }
             var result = await _userManager.CreateAsync(user, registerDto.Password);
             if (!result.Succeeded)
             {
-                return BadRequest(new ResponseApi(int.Parse(result.Errors.FirstOrDefault()?.Code), result.Errors.FirstOrDefault().Description));
+               var errors=new Dictionary<string, string>() ;
+                foreach (var error in result.Errors)
+                {
+                    errors.Add("idi", error.Description);
+                }
+                return BadRequest(new { errors = errors });
+
+                //return BadRequest(new ResponseApi(int.Parse(result.Errors.FirstOrDefault()?.Code), result.Errors.FirstOrDefault().Description));
             }
             await _userManager.AddToRoleAsync(user, "User");
             var token=await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -79,10 +105,16 @@ namespace Ecom.ApI.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ValidationProblemDetails(ModelState));
+
+                }
                 var user = await _userManager.FindByEmailAsync(loginDto.Email);
                 if (user == null)
                 {
-                    return BadRequest(new ResponseApi(404, "User not found"));
+                    ModelState.AddModelError("email", "Not have account with this email");
+                    return BadRequest(new ValidationProblemDetails(ModelState));
                 }
                 var result = await _signInManager.PasswordSignInAsync(user, loginDto.Password, true, false);
                 if (!result.Succeeded)
@@ -104,11 +136,11 @@ namespace Ecom.ApI.Controllers
                 }
                 var token = GenerateJwtToken.GenerateToken(user.Id, configuration);
                 var roles = await _userManager.GetRolesAsync(user);
-                return Ok(new
-                {
-                    token,
-                    roles
-                });
+                Helper.CockiesConfig.SetCookie(HttpContext, "jwt", token);
+                return Ok(new { message = "Login success" });
+
+
+
 
             }
             catch (Exception ex)
@@ -133,11 +165,13 @@ namespace Ecom.ApI.Controllers
                 }
                 return Ok(new
                 {
+                    isLogged=true,
                     displayName = user.DisplayName,
                     email = user.Email,
                     userName = user.UserName,
                     picImage = user.PicImage ?? null,
                     phoneNumber = user.PhoneNumber ?? null,
+                    role = _userManager.GetRolesAsync(user).Result.FirstOrDefault(),
                 });
 
 
@@ -150,8 +184,8 @@ namespace Ecom.ApI.Controllers
             }
 
         }
-        [HttpPost("update-user")]
-        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDTO updateUserDTO)
+        [HttpPut("update-user")]
+        public async Task<IActionResult> UpdateUser([FromForm] UpdateUserDTO updateUserDTO)
         {
             try
             {
@@ -164,9 +198,16 @@ namespace Ecom.ApI.Controllers
                 user.DisplayName = updateUserDTO.DisplayName;
                 user.UserName = updateUserDTO.UserName;
                 user.Email = updateUserDTO.Email;
-                if (updateUserDTO.PicImage != null)
+                if (updateUserDTO.PicImage != null&&updateUserDTO.PicImage.Length>0)
                 {
-                    user.PicImage = updateUserDTO.PicImage;
+                    if (user.PicImage!=null)
+                    {
+                    _imageMangmentService.DeleteImageAync(user.PicImage);
+
+                    }
+                    var imagePath = await _imageMangmentService.UploadImageAsync(updateUserDTO.PicImage, "user");
+                    user.PicImage = imagePath;
+
                 }
                 var result = await _userManager.UpdateAsync(user);
                 if (!result.Succeeded)
@@ -183,7 +224,7 @@ namespace Ecom.ApI.Controllers
 
 
         [HttpPost("forget-password")]
-        public async Task<IActionResult> ForgetPassword(string email)
+        public async Task<IActionResult> ForgetPassword([FromQuery]string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
@@ -192,16 +233,17 @@ namespace Ecom.ApI.Controllers
             }
             var token=await _userManager.GeneratePasswordResetTokenAsync(user);
             token = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            _emailSender.SendEmail(email, token);
             return Ok(new
             {
                 StatusCode = 200,
-                Message = "Reset Password Token Created Successfully",
-                resetPasswordToken = token
+                Message = "Reset Password Code sent in email address Successfully",
+                //resetPasswordToken = token
             });
 
         }
         [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromQuery] ResetPasswordDTO resetPasswordDTO)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO resetPasswordDTO)
         {
             if (ModelState.IsValid)
             {
@@ -245,6 +287,8 @@ namespace Ecom.ApI.Controllers
             try
             {
                 await _signInManager.SignOutAsync();
+
+                Helper.CockiesConfig.RemoveCookie(HttpContext, "jwt");
                 return Ok(new ResponseApi(200, "Logout Successfully"));
             }
             catch (Exception ex)
@@ -268,7 +312,7 @@ namespace Ecom.ApI.Controllers
                 var roles = await _userManager.GetRolesAsync(user);
                 return Ok(new
                 {
-                    roles
+                    role = roles.FirstOrDefault(),
                 });
             }
             catch (Exception ex)
@@ -276,7 +320,30 @@ namespace Ecom.ApI.Controllers
                 return BadRequest(new ResponseApi(500, ex.Message));
             }
         }
-      
+
+     
+        [HttpGet("check-auth")]
+        public async Task<IActionResult> CheckAuth()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var user =  _userManager.Users.FirstOrDefault(x => x.Id == userId);
+                if (user == null)
+                {
+                    return Ok(new { isAuth = false, role = "NoRole"});
+                }
+                var roles = await _userManager.GetRolesAsync(user);
+                return Ok(new {isAuth=true,role= roles.FirstOrDefault()});
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseApi(500, ex.Message));
+            }
+        }
+
+
 
     }
 }

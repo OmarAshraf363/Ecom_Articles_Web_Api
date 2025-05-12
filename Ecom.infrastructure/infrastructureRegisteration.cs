@@ -29,6 +29,7 @@ namespace Ecom.infrastructure
 
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddTransient<IEmailSender, EmailSender>();
             services.AddSingleton<IImageMangmentService, UmageMangmentService>();
             IServiceCollection serviceCollection = services.AddSingleton<IFileProvider>(new PhysicalFileProvider(Directory.GetCurrentDirectory()));
 
@@ -45,25 +46,41 @@ namespace Ecom.infrastructure
         public static void AddJwt(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-       .AddJwtBearer(options =>
-       {
-           options.RequireHttpsMetadata = false;
-           options.SaveToken = true;
-           options.TokenValidationParameters = new TokenValidationParameters
-           {
-               ValidateIssuer = true,
-               ValidateAudience = false,
-               ValidateLifetime = true,
-               ValidateIssuerSigningKey = true,
-               ValidIssuer = configuration["Jwt:Issuer"],
-               IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:SecretKey"]))
-           };
-       });
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
-                options.AddPolicy("User", policy => policy.RequireRole("User"));
-            });
+                .AddJwtBearer(options =>
+                {
+                    options.RequireHttpsMetadata = false;
+                    options.SaveToken = true;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = configuration["JWT:Issuer"],
+                        ValidAudience = configuration["JWT:Audience"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:SecretKey"]))
+                    };
+
+                    // ✅ هذا مهم لقراءة التوكن من الهيدر اللي بيضيفه الميدل وير
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                            {
+                                context.Token = authHeader.Substring("Bearer ".Length);
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
+
+            //services.AddAuthorization(options =>
+            //{
+            //    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+            //    options.AddPolicy("User", policy => policy.RequireRole("User"));
+            //});
         }
 
 

@@ -18,11 +18,11 @@ namespace Ecom.ApI.Helper
 
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:SecretKey"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
-                issuer: configuration["Jwt:Issuer"],
-                audience: configuration["Jwt:Audience"],
+                issuer: configuration["JWT:Issuer"],
+                audience: configuration["JWT:Audience"],
                 claims: claims,
                 expires: DateTime.Now.AddDays(30),
                 signingCredentials: creds

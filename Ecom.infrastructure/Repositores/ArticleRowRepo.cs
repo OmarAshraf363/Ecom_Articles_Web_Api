@@ -19,29 +19,32 @@ namespace Ecom.infrastructure.Repositores
         {
             _imageMangmentService = imageMangmentService;
         }
-        public async Task<ArticleRow> AddAsync(ArticleRowDTOWithImageFeilds model)
+        public async Task<ArticleRow> PrepareArticleRowAsync(ArticleRowDTOWithImageFeilds model)
         {
-           
+            if (model==null)
+            {
+                return null;
+            }
+
+            var articleRow = new ArticleRow()
+            {
+                Text = model.Text,
+                ArticleId = int.Parse(model.ArticleId),
+
+            };
+
+
+
             if (model.Image!=null)
             {
                 var imagePath = await _imageMangmentService
                .UploadImageAsync(model.Image, "rowsImage");
-                var articleRow = new ArticleRow()
-                {
-                    Text = model.Text,
-                    ArticleId = int.Parse( model.ArticleId),
-                    Image = imagePath
-
-                };
+               articleRow.Image = imagePath;
                 return articleRow;
             }
             else
             {
-                var articleRow = new ArticleRow()
-                {
-                    Text = model.Text,
-                    ArticleId = int.Parse(model.ArticleId),
-                };
+              
                 return articleRow;
             }
 

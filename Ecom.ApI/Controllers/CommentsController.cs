@@ -5,6 +5,7 @@ using Ecom.Core.Entites.Product;
 using Ecom.Core.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Ecom.ApI.Controllers
 {
@@ -19,10 +20,30 @@ namespace Ecom.ApI.Controllers
         {
             try
             {
-                var articleComments = await _unitOfWork.CommentRepo.GetAllAsyncWithModify(x => x.ArticleId == articleId, e => e.Article);
+                var articleComments = await _unitOfWork.CommentRepo.GetAllAsyncWithModify(x => x.ArticleId == articleId,e=>e.User, e => e.Article);
                 if (articleComments.Count <= 0)
-                    return BadRequest(new ResponseApi(400));
-                return Ok(articleComments);
+                    return Ok(new ResponseApi(201, "Not Found Comments"));
+              
+                return Ok(new
+                    {
+                        count = articleComments.Count,
+                        comments =  articleComments.Select(c => new
+                        {
+                            id = c.Id,
+                            content = c.Content,
+                            articleId = c.ArticleId,
+                            createdAt = c.CreatedAt,
+                            user = new
+                            {
+                                displayName = c.User.DisplayName,
+                                email =         c.User.Email,
+                                picImage = c.User.PicImage,
+                                userName = c.User.UserName,
+                            }
+                        })
+
+
+                    });
             }
             catch (Exception ex)
             {
@@ -37,7 +58,12 @@ namespace Ecom.ApI.Controllers
         {
             try
             {
+                var userId=User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                    return BadRequest(new ResponseApi(400, "User not found"));
+
                 var comment = _mapper.Map<Comment>(commentDTO);
+                comment.UserId = userId;
                 await _unitOfWork.CommentRepo.AddAsync(comment);
                 return Ok(new ResponseApi(201, "Comment added successfully"));
             }

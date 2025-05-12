@@ -10,6 +10,6 @@ namespace Ecom.Core.Interfaces
 {
    public interface IArticleRow:IGenricRepository<ArticleRow>
     {
-        public  Task<ArticleRow> AddAsync(ArticleRowDTOWithImageFeilds model);
+        public  Task<ArticleRow> PrepareArticleRowAsync(ArticleRowDTOWithImageFeilds model);
     }
 }

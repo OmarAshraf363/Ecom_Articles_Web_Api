@@ -9,10 +9,12 @@ using System.Threading.Tasks;
 
 namespace Ecom.Core.Interfaces
 {
-   public interface IArticleRepository: IGenricRepository<Article>
+    public interface IArticleRepository : IGenricRepository<Article>
     {
         Task<IEnumerable<ArticleDTO>> GetAllAsync(ArticleParams articleParams);
-      public Task<Article> AddAsync(ArticleDTOWithImageFeilds articleDTO);
+        public Task<Article> PrepareArticleAsync(ArticleDTOWithImageFeilds articleDTO);
         public void DeleteAsyncWithDeleteingImage(string src);
+
+        public IEnumerable<ArticleDTO> MapAriclesToArticlesDTO(IEnumerable<Article> articles);
     }
 }

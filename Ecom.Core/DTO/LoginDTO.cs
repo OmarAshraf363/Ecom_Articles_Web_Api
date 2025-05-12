@@ -14,4 +14,13 @@ namespace Ecom.Core.DTO
         [Required]
         public string Password { get; set; }
     }
+    public class LoginResponseDTO
+    {
+        public string Token { get; set; }=string.Empty;
+        public DateTime Expiration { get; set; }=DateTime.Now.AddDays(30);
+        public string UserId { get; set; }= string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
 }
